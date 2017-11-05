@@ -19,15 +19,18 @@ func main() {
 
 	bittrex := bittrex.New(bittrex_api_key, bittrex_api_secret)
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Timestamp", "OrderType", "Limit", "Quantity", "Price", "PricePerUnit"})
+	table.SetHeader([]string{"Timestamp", "Exchange", "OrderType", "Limit", "Quantity", "Price", "PricePerUnit"})
 
+	market := "all"
 	args := os.Args[1:]
-	market := fmt.Sprintf("%v-%v", args[0], args[1])
+	if len(args) > 0 {
+		market = fmt.Sprintf("%v-%v", args[0], args[1])
+	}
 	order_history, _ := bittrex.GetOrderHistory(market)
 
 	for _, order := range order_history {
 		ts := order.TimeStamp.Format(time.UnixDate)
-		s := []string{ts, order.OrderType, fstring(order.Limit), fstring(order.Quantity), fstring(order.Price), fstring(order.PricePerUnit)}
+		s := []string{ts, order.Exchange, order.OrderType, fstring(order.Limit), fstring(order.Quantity), fstring(order.Price), fstring(order.PricePerUnit)}
 		table.Append(s)
 	}
 	table.Render()
