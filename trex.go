@@ -1,30 +1,28 @@
 package main
 
 import (
-	"github.com/olekukonko/tablewriter"
-	"github.com/toorop/go-bittrex"
+	"fmt"
+	"gopkg.in/urfave/cli.v1"
 	"os"
-	"strconv"
 )
 
-func fstring(f float64) string {
-	return strconv.FormatFloat(f, 'f', 8, 64)
-}
-
+// var (
+//     balanceCommand = cli.Command{
+//         Name: "ba",
+//         Usage: "List Balances",
+//         ArgsUsage: "",
+//         Category: "NORMAL COMMANDS",
+//         Description: `trex ba will list your balances`,
+//     }
+// )
 func main() {
-	bittrex_api_key := os.Getenv("BITTREX_API_KEY")
-	bittrex_api_secret := os.Getenv("BITTREX_API_SECRET")
-
-	bittrex := bittrex.New(bittrex_api_key, bittrex_api_secret)
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Coin", "Total", "Not In Orders", "Pending Deposit"})
-
-	balances, _ := bittrex.GetBalances()
-	for _, balance := range balances {
-		s := []string{balance.Currency, fstring(balance.Balance), fstring(balance.Available), fstring(balance.Pending)}
-		if balance.Balance != 0 {
-			table.Append(s)
-		}
+	app := cli.NewApp()
+	app.Name = "trex"
+	app.Usage = "easy interface with bittrex"
+	app.Action = func(c *cli.Context) error {
+		fmt.Println("Boom! I say!")
+		return nil
 	}
-	table.Render()
+
+	app.Run(os.Args)
 }
