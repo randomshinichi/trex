@@ -6,12 +6,23 @@ import (
 	"github.com/toorop/go-bittrex"
 	"gopkg.in/urfave/cli.v1"
 	"os"
-	"strconv"
 	"time"
+	"github.com/shopspring/decimal"
 )
 
-func fstring(f float64) string {
-	return strconv.FormatFloat(f, 'f', 8, 64)
+func fstring(f decimal.Decimal) string {
+	return f.String()
+}
+
+func marketFromArgs(c *cli.Context) string {
+	var market string
+	fmt.Printf("%#v\n", c)
+	if c.NArg() > 0 {
+		market = fmt.Sprintf("%v-%v", c.Args().Get(0), c.Args().Get(1))
+	} else{
+		market = "all"
+	}
+	return market
 }
 
 var (
@@ -28,7 +39,7 @@ var (
 
 	balanceCommand = cli.Command{
 		Name:    "balance",
-		Aliases: []string{"ba"},
+		Aliases: []string{"b"},
 		Usage:   "List Balances",
 		Flags:   []cli.Flag{tokenFlag, secretFlag},
 		Action: func(c *cli.Context) error {
@@ -42,7 +53,7 @@ var (
 			balances, _ := bittrex.GetBalances()
 			for _, balance := range balances {
 				s := []string{balance.Currency, fstring(balance.Balance), fstring(balance.Available), fstring(balance.Pending)}
-				if balance.Balance != 0 {
+				if !balance.Balance.Equals(decimal.Zero) {
 					table.Append(s)
 				}
 			}
@@ -60,22 +71,21 @@ var (
 
 			bittrex := bittrex.New(bittrex_api_key, bittrex_api_secret)
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"OrderType", "Limit", "Quantity", "Price", "PricePerUnit"})
+			table.SetHeader([]string{"OrderUUID","OrderType", "Exchange", "Limit", "Quantity", "Price", "PricePerUnit"})
 
-			market := fmt.Sprintf("%v-%v", c.Args().Get(0), c.Args().Get(1))
-			order_history, _ := bittrex.GetOpenOrders(market)
+			order_history, _ := bittrex.GetOpenOrders(marketFromArgs(c))
 
 			for _, order := range order_history {
-				s := []string{order.OrderType, fstring(order.Limit), fstring(order.Quantity), fstring(order.Price), fstring(order.PricePerUnit)}
+				s := []string{order.OrderUuid, order.OrderType, order.Exchange,fstring(order.Limit), fstring(order.Quantity), fstring(order.Price), fstring(order.PricePerUnit)}
 				table.Append(s)
 			}
 			table.Render()
 			return nil
 		},
 	}
-	ordershistCommand = cli.Command{
-		Name:  "ordershist",
-		Usage: "List historical orders",
+	histCommand = cli.Command{
+		Name:  "hist",
+		Usage: "hist <BASE> <ALT>",
 		Flags: []cli.Flag{tokenFlag, secretFlag},
 		Action: func(c *cli.Context) error {
 			bittrex_api_key := c.String("key")
@@ -85,13 +95,7 @@ var (
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetHeader([]string{"Timestamp", "Exchange", "OrderType", "Limit", "Quantity", "Price", "PricePerUnit"})
 
-			var market string
-			if c.NArg() > 0 {
-				market = fmt.Sprintf("%v-%v", c.Args().Get(0), c.Args().Get(1))
-			} else {
-				market = "all"
-			}
-			order_history, _ := bittrex.GetOrderHistory(market)
+			order_history, _ := bittrex.GetOrderHistory(marketFromArgs(c))
 
 			for _, order := range order_history {
 				ts := order.TimeStamp.Format(time.UnixDate)
@@ -102,12 +106,29 @@ var (
 			return nil
 		},
 	}
+	cancelCommand = cli.Command{
+		Name:"cancel",
+		Usage: "cancel OrderUUID",
+		Flags: []cli.Flag{tokenFlag, secretFlag},
+		Action: func(c *cli.Context) error {
+			bittrex_api_key := c.String("key")
+			bittrex_api_secret := c.String("secret")
+
+			bittrex := bittrex.New(bittrex_api_key, bittrex_api_secret)
+			err := bittrex.CancelOrder(c.Args().Get(0))
+			if err != nil {
+				fmt.Printf("%v\n", err)
+				return err
+			}
+			return nil
+		},
+	}
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "trex"
 	app.Usage = "easy interface with bittrex"
-	app.Commands = []cli.Command{balanceCommand, ordersCommand, ordershistCommand}
+	app.Commands = []cli.Command{balanceCommand, ordersCommand, histCommand, cancelCommand}
 	app.Run(os.Args)
 }
