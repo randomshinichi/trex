@@ -3,23 +3,19 @@ package main
 import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
+	"github.com/shopspring/decimal"
 	"github.com/toorop/go-bittrex"
 	"gopkg.in/urfave/cli.v1"
 	"os"
 	"time"
-	"github.com/shopspring/decimal"
 )
-
-func fstring(f decimal.Decimal) string {
-	return f.String()
-}
 
 func marketFromArgs(c *cli.Context) string {
 	var market string
 	fmt.Printf("%#v\n", c)
 	if c.NArg() > 0 {
 		market = fmt.Sprintf("%v-%v", c.Args().Get(0), c.Args().Get(1))
-	} else{
+	} else {
 		market = "all"
 	}
 	return market
@@ -52,7 +48,7 @@ var (
 
 			balances, _ := bittrex.GetBalances()
 			for _, balance := range balances {
-				s := []string{balance.Currency, fstring(balance.Balance), fstring(balance.Available), fstring(balance.Pending)}
+				s := []string{balance.Currency, balance.Balance.String(), balance.Available.String(), balance.Pending.String()}
 				if !balance.Balance.Equals(decimal.Zero) {
 					table.Append(s)
 				}
@@ -71,12 +67,12 @@ var (
 
 			bittrex := bittrex.New(bittrex_api_key, bittrex_api_secret)
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"OrderUUID","OrderType", "Exchange", "Limit", "Quantity", "Price", "PricePerUnit"})
+			table.SetHeader([]string{"OrderUUID", "OrderType", "Exchange", "Limit", "Quantity", "Price", "PricePerUnit"})
 
 			order_history, _ := bittrex.GetOpenOrders(marketFromArgs(c))
 
 			for _, order := range order_history {
-				s := []string{order.OrderUuid, order.OrderType, order.Exchange,fstring(order.Limit), fstring(order.Quantity), fstring(order.Price), fstring(order.PricePerUnit)}
+				s := []string{order.OrderUuid, order.OrderType, order.Exchange, order.Limit.String(), order.Quantity.String(), order.Price.String(), order.PricePerUnit.String()}
 				table.Append(s)
 			}
 			table.Render()
@@ -99,7 +95,7 @@ var (
 
 			for _, order := range order_history {
 				ts := order.TimeStamp.Format(time.UnixDate)
-				s := []string{ts, order.Exchange, order.OrderType, fstring(order.Limit), fstring(order.Quantity), fstring(order.Price), fstring(order.PricePerUnit)}
+				s := []string{ts, order.Exchange, order.OrderType, order.Limit.String(), order.Quantity.String(), order.Price.String(), order.PricePerUnit.String()}
 				table.Append(s)
 			}
 			table.Render()
@@ -107,7 +103,7 @@ var (
 		},
 	}
 	cancelCommand = cli.Command{
-		Name:"cancel",
+		Name:  "cancel",
 		Usage: "cancel OrderUUID",
 		Flags: []cli.Flag{tokenFlag, secretFlag},
 		Action: func(c *cli.Context) error {
